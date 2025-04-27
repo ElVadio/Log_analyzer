@@ -28,7 +28,9 @@ def analyze_odometer_timeline(log_entries: list[LogEntry]):
 
         days[date_str].append({
             "time": entry.timestamp.strftime("%H:%M"),
-            "status": status
+            "status": status,
+            "location": entry.location,   # <-- add location
+            "odometer": entry.odometer    # <-- add odometer value
         })
         previous = entry
 
