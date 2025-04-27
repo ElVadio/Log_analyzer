@@ -2,13 +2,14 @@ import pdfplumber
 from io import BytesIO
 from models.log_model import DriverLogEntry
 import re
-from parsers.mileage_checker import detect_odometer_anomalies_with_vehicle_change
+from backend.mileage_analyzer import detect_odometer_anomalies_with_vehicle_change
+
 
 def parse_driver_log(daily_log):
     vehicles = daily_log['vehicles']  # list from header
     events = daily_log['events']      # parsed event list
 
-    anomalies = detect_odometer_anomalies_with_vehicle_change(events, vehicles)
+    odometer_anomalies = detect_odometer_anomalies_with_vehicle_change(events, vehicles)
 
     entries = []  # Define entries and populate it with parsed log entries
     for event in events:
@@ -22,7 +23,9 @@ def parse_driver_log(daily_log):
         entries.append(entry)
 
     return {
-        "anomalies": anomalies,
+        "events": events,
+        "vehicles": vehicles,
+        "odometer_anomalies": odometer_anomalies,
         "entries": entries
     }
 

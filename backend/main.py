@@ -1,10 +1,10 @@
 # backend/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from parsers.pdf_parser import parse_driver_log
+from backend.parsers.parsers import parse_driver_log
 from analyzers.hos_checker import check_hos_violations
 from analyzers.custom_checker import check_custom_violations
 from backend.analyzers.odometer_checker import analyze_odometer_timeline
-from backend.parsers.pdf_parser import load_logs  # or wherever load PDF logs
+from backend.parsers.parsers import load_logs  # or wherever load PDF logs
 from fastapi import FastAPI
 
 app = FastAPI()
