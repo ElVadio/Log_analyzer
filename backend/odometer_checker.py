@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from backend.models.log_model import LogEntry  # Assuming you have a LogEntry or similar model
+from backend.models import LogEntry  # Assuming you have a LogEntry or similar model
 
 def analyze_odometer_timeline(log_entries: list[LogEntry]):
     """

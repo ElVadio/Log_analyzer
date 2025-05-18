@@ -1,6 +1,6 @@
 import pdfplumber
 from io import BytesIO
-from models.log_model import DriverLogEntry
+from backend.models import DriverLogEntry
 import re
 from backend.mileage_analyzer import detect_odometer_anomalies_with_vehicle_change
 
