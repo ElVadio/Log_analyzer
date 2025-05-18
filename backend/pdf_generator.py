@@ -1,7 +1,7 @@
 from fpdf import FPDF
 from datetime import datetime
 import os
-
+ 
 class PDFGenerator:
     def __init__(self, output_folder="generated_pdfs"):
         self.output_folder = output_folder
