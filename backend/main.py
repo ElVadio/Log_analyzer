@@ -1,38 +1,65 @@
-# backend/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from backend.parsers.parsers import parse_driver_log
-from analyzers.hos_checker import check_hos_violations
-from analyzers.custom_checker import check_custom_violations
-from backend.analyzers.odometer_checker import analyze_odometer_timeline
-from backend.parsers.parsers import load_logs  # or wherever load PDF logs
-from fastapi import FastAPI
+from backend.parsers import parse_pdf_log
+from backend.utils.odometer_extractor import extract_odometer_ranges_by_day
+from backend.utils.vehicle_assignment import assign_vehicle_ids_by_odometer
+import os
 
-app = FastAPI()
+app = FastAPI(title="Driver Log Analyzer")
 
-@app.get("/api/odometer-timeline")
-async def get_odometer_timeline():
-    logs = load_logs()  # Implement to load and parse your pdf logs
-    timeline = analyze_odometer_timeline(logs)
-    return timeline
+# Allowed status codes to include in output
+ALLOWED_STATUSES = {"Driving", "On Duty", "Off Duty", "Sleeper", "Personal Use", "Intermediate w/ CLP"}
 
-app = FastAPI()
 
-@app.post("/upload-log/")
-async def upload_log(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-
-    content = await file.read()
+@app.post("/api/parse")
+async def parse_pdf(file: UploadFile = File(...)):
+    if file.content_type != "application/pdf":
+        raise HTTPException(400, detail="Only PDF uploads are accepted")
 
     try:
-        log_data = parse_driver_log(content)
-        hos_violations = check_hos_violations(log_data)
-        custom_violations = check_custom_violations(log_data)
+        contents = await file.read()
+
+        # Step 1: Parse raw log entries from PDF
+        logs = parse_pdf_log(contents)
+        print("Parsed statuses:", [entry.status for entry in logs])
+
+
+        # Step 2: Extract odometer-to-vehicle ID mapping
+        ranges_by_day = extract_odometer_ranges_by_day(contents)
+
+        # Step 3: Assign vehicle ID based on odometer ranges
+        logs = assign_vehicle_ids_by_odometer(logs, ranges_by_day)
+
+        # Step 4: Load unmatched lines for debug
+        unmatched = []
+        if os.path.exists("unmatched_lines.txt"):
+            with open("unmatched_lines.txt", "r", encoding="utf-8") as f:
+                unmatched = f.read().splitlines()
+
+        # Step 5: Filter logs by status
+        filtered = [
+            {
+                "vehicle_id": e.vehicle_id,
+                "timestamp": e.timestamp,
+                "status": e.status,
+                "odometer": e.odometer,
+                "location": e.location,
+                "engine_hours": e.engine_hours,
+                "origin": e.origin,
+                "notes": e.notes
+            }
+            for e in logs
+            if e.status in ALLOWED_STATUSES
+        ]
+
+        # Step 6: Return result
+        if not filtered:
+            return {"detail": "No matching log entries found", "unmatched_lines": unmatched}
 
         return {
-            "log_data": [entry.dict() for entry in log_data],
-            "hos_violations": hos_violations,
-            "custom_violations": custom_violations
+            "entries": filtered,
+            "unmatched_lines": unmatched,
+            "odometer_ranges": ranges_by_day
         }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error while processing PDF: {str(e)}")

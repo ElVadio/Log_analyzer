@@ -1,11 +1,10 @@
 from collections import defaultdict
 from datetime import datetime
-from backend.models import LogEntry  # Assuming you have a LogEntry or similar model
+from backend.models import DriverLogEntry
+  # Assuming you have a LogEntry or similar model
 
-def analyze_odometer_timeline(log_entries: list[LogEntry]):
-    """
-    Analyzes odometer readings and returns a day-by-day timeline with anomalies.
-    """
+def analyze_odometer_timeline(log_entries: list[DriverLogEntry]):
+    
     days = defaultdict(list)
 
     # Sort entries by timestamp just in case
@@ -13,13 +12,17 @@ def analyze_odometer_timeline(log_entries: list[LogEntry]):
 
     previous = None
     for entry in log_entries:
-        date_str = entry.timestamp.strftime("%Y-%m-%d")
+        timestamp_obj = datetime.strptime(entry.timestamp, "%Y-%m-%d %H:%M")
+        date_str = timestamp_obj.strftime("%Y-%m-%d")
+        if date_str not in days:
+            days[date_str] = []
         odometer = entry.odometer
 
         if previous:
+            previous_timestamp_obj = datetime.strptime(previous.timestamp, "%Y-%m-%d %H:%M")
             if odometer < previous.odometer:
                 status = "anomaly_drop"
-            elif odometer == previous.odometer and (entry.timestamp - previous.timestamp).seconds > 3600:
+            elif odometer == previous.odometer and (timestamp_obj - previous_timestamp_obj).seconds > 3600:
                 status = "missing_data"
             else:
                 status = "normal"
